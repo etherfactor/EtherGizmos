@@ -1,0 +1,3 @@
+[submodule "apps/warframe"]
+	path = apps/warframe
+	url = https://github.com/EtherFactor/EtherGizmos-Warframe
