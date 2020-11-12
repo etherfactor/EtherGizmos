@@ -1,3 +1,6 @@
 [submodule "apps/warframe"]
 	path = apps/warframe
 	url = https://github.com/EtherFactor/EtherGizmos-Warframe
+[submodule "apps/warframe-beta"]
+	path = apps/warframe-beta
+	url = https://github.com/EtherFactor/EtherGizmos-Warframe
