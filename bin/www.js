@@ -1,3 +1,5 @@
+const superconsole = require('../scripts/logging/superconsole');
+
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
@@ -10,6 +12,11 @@ const credentials = require('../scripts/all/credentials');
 
 const mainApp = express();
 const apps = [];
+
+var environment = process.argv[2];
+
+//Enable console debugging
+superconsole.SetDebug(environment == 'development' ? true : false);
 
 //Load all apps and store them
 fs.readdirSync('./apps').forEach(folder => {
@@ -24,20 +31,29 @@ fs.readdirSync('./apps').forEach(folder => {
 const debug = require('debug')('dev:server');
 const http = require('http');
 const https = require('https');
+const { env } = require('process');
 
 
 //Load ports from environment variables
 var portHttp = ParsePort(process.env.PORT_HTTP || '80');
 var portHttps = ParsePort(process.env.PORT_HTTPS || '443');
 
+var websocketHttp = 1080;
+var websocketHttps = 1443;
+
 //Iterate through apps
 apps.forEach((subApp) => {
     var initializedApp = subApp.App.Initialize(function(app) {
+        app.set('env', environment);
+
         //app.use(logger('dev'));
         app.use(bodyParser.json());
         app.use(bodyParser.urlencoded({ extended: false }));
         app.use(cookieParser());
-        app.set('port', portHttp);
+        //app.set('port', portHttp);
+        app.set('websocket-http', websocketHttp++);
+        app.set('websocket-https', websocketHttps++);
+        app.set('app-name', subApp.Name);
     });
 
     mainApp.use(vhost(`${subApp.Name}.localhost`, initializedApp));
@@ -117,9 +133,24 @@ function OnError(error) {
  * Called on initialization
  */
 function OnListening() {
-    var addr = httpServer.address();
-    var bind = typeof addr === 'string'
-      ? 'pipe ' + addr
-      : 'port ' + addr.port;
-    debug('Listening on ' + bind);
+    var addr = this.address();
+    var bind = addr.port;
+
+    superconsole.log(superconsole.MessageLevel.INFORMATION, `$blue:Listening on port $white,bright{${bind}}`);
 }
+
+Object.defineProperty(
+    global,
+    '__debug',
+    {
+        get: function() {
+            const e = new Error();
+            const regex = /\d+:\d+/i;
+            const regex2 = /at (?:\w+(?:\.[\w<>]+)* )?\(?(.*):\d+:\d+\)?$/
+            const match = regex.exec(e.stack.split("\n")[3]);
+            const match2 = regex2.exec(e.stack.split("\n")[3]);
+            let filename = match2[1].split('/')[match2[1].split('/').length - 1];
+            return filename.replace(process.cwd(), '.') + ':' + match[0].split(':')[0];
+        }
+    }
+);
